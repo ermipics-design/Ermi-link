@@ -1,4 +1,4 @@
- name: Build ERMI LINK Android AAB
+name: Build ERMI LINK Android AAB
 
 on:
   workflow_dispatch:
@@ -18,14 +18,24 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4.0.4
-        with:
-          packages: 'platform-tools'
-
-      - name: Install Android packages
+      - name: Setup Android SDK manually
         run: |
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          # Android SDK Command-line Tools ማውረድ
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          curl -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q cmdline-tools.zip -d $HOME/android-sdk/cmdline-tools
+          mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+
+          # Environment variables ማስተካከል
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+
+      - name: Accept licenses and install packages
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
@@ -39,4 +49,3 @@ jobs:
           name: ERMI-LINK-release-AAB
           path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
-          
