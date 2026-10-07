@@ -1,4 +1,4 @@
-name: Build ERMI LINK Android AAB
+ name: Build ERMI LINK Android AAB
 
 on:
   workflow_dispatch:
@@ -19,7 +19,9 @@ jobs:
           cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android packages
         run: |
@@ -37,3 +39,4 @@ jobs:
           name: ERMI-LINK-release-AAB
           path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
+          
