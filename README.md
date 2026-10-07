@@ -16,18 +16,24 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android packages
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
       - name: Build Release AAB
-        run: ./gradlew bundleRelease --no-daemon
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
 
       - name: Upload ERMI LINK AAB
         uses: actions/upload-artifact@v4
         with:
           name: ERMI-LINK-release-AAB
           path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
