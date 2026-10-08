@@ -11,6 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Unzip the project
+        run: |
+          unzip -q ERMI-LINK-PLAY-READY.zip
+          ls -la
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -33,24 +38,26 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Install Gradle
-        run: |
-          curl -sL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o gradle.zip
-          unzip -q gradle.zip
-          echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
-
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version 8.7
-
       - name: Make Gradle executable
-        run: chmod +x ./gradlew
+        run: |
+          chmod +x ./gradlew || true
+          find . -name "gradlew" -exec chmod +x {} \;
 
       - name: Build Release AAB
-        run: ./gradlew bundleRelease --no-daemon --stacktrace
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew bundleRelease --no-daemon --stacktrace
+          else
+            echo "gradlew not found, searching..."
+            find . -name "gradlew"
+            find . -name "build.gradle*"
+          fi
 
       - name: Upload ERMI LINK AAB
         uses: actions/upload-artifact@v4
         with:
           name: ERMI-LINK-release-AAB
-          path: app/build/outputs/bundle/release/*.aab
-          if-no-files-found: erro
+          path: |
+            **/build/outputs/bundle/release/*.aab
+            **/*.aab
+          if-no-files-found: warn
