@@ -14,9 +14,7 @@ jobs:
       - name: Unzip project
         run: |
           unzip -q ERMI-LINK-PLAY-READY.zip
-          echo "===== After unzip ====="
           ls -la
-          find . -maxdepth 3 -type d
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -40,40 +38,38 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Find project root and setup Gradle
-        id: project
+      - name: Show project build files
         run: |
-          # Find the real Android project root
-          PROJECT_ROOT=$(find . -name "settings.gradle*" -o -name "settings.gradle.kts" | head -1 | xargs dirname 2>/dev/null || echo ".")
-          if [ "$PROJECT_ROOT" = "." ] || [ -z "$PROJECT_ROOT" ]; then
-            PROJECT_ROOT=$(find . -name "build.gradle*" | head -1 | xargs dirname 2>/dev/null || echo ".")
-          fi
-          echo "PROJECT_ROOT=$PROJECT_ROOT"
-          echo "root=$PROJECT_ROOT" >> $GITHUB_OUTPUT
-          cd "$PROJECT_ROOT"
-          ls -la
+          echo "===== settings.gradle ====="
+          cat ERMI-LINK-PLAY-READY/settings.gradle || true
+          echo ""
+          echo "===== root build.gradle ====="
+          cat ERMI-LINK-PLAY-READY/build.gradle || true
+          echo ""
+          echo "===== app/build.gradle ====="
+          cat ERMI-LINK-PLAY-READY/app/build.gradle || true
+          echo ""
+          echo "===== gradle.properties ====="
+          cat ERMI-LINK-PLAY-READY/gradle.properties || true
 
-          # Install Gradle if needed
-          if [ ! -f "./gradlew" ]; then
-            echo "No gradlew found, installing Gradle and generating wrapper..."
-            curl -sL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/gradle.zip
-            unzip -q /tmp/gradle.zip -d /tmp
-            export PATH="/tmp/gradle-8.7/bin:$PATH"
-            gradle wrapper --gradle-version 8.7
-          fi
+      - name: Install Gradle 8.4 and generate wrapper
+        run: |
+          cd ERMI-LINK-PLAY-READY
+          curl -sL https://services.gradle.org/distributions/gradle-8.4-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          export PATH="/tmp/gradle-8.4/bin:$PATH"
+          gradle wrapper --gradle-version 8.4
           chmod +x ./gradlew
-          echo "Gradle ready at $PROJECT_ROOT"
 
       - name: Build Release AAB
         run: |
-          cd "${{ steps.project.outputs.root }}"
-          ./gradlew bundleRelease --no-daemon --stacktrace || ./gradlew assembleRelease --no-daemon --stacktrace
+          cd ERMI-LINK-PLAY-READY
+          ./gradlew bundleRelease --no-daemon --stacktrace
 
-      - name: Find and show artifacts
+      - name: Find artifacts
         run: |
-          echo "===== Searching for AAB / APK ====="
-          find . -name "*.aab" -o -name "*.apk" 2>/dev/null | tee /tmp/artifacts.txt
-          cat /tmp/artifacts.txt
+          find . -name "*.aab" -o -name "*.apk" | tee /tmp/arts.txt
+          cat /tmp/arts.txt
 
       - name: Upload AAB/APK
         uses: actions/upload-artifact@v4
@@ -83,4 +79,4 @@ jobs:
             **/*.aab
             **/*.apk
           if-no-files-found: warn
-          retention-days: 30
+          
