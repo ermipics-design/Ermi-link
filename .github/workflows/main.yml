@@ -11,7 +11,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip the project
+      - name: Unzip project
         run: |
           unzip -q ERMI-LINK-PLAY-READY.zip
           echo "===== After unzip ====="
@@ -40,29 +40,42 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Make Gradle executable
+      - name: Find project root and setup Gradle
+        id: project
         run: |
-          find . -name "gradlew" -exec chmod +x {} \;
-          find . -name "gradlew"
+          # Find the real Android project root
+          PROJECT_ROOT=$(find . -name "settings.gradle*" -o -name "settings.gradle.kts" | head -1 | xargs dirname 2>/dev/null || echo ".")
+          if [ "$PROJECT_ROOT" = "." ] || [ -z "$PROJECT_ROOT" ]; then
+            PROJECT_ROOT=$(find . -name "build.gradle*" | head -1 | xargs dirname 2>/dev/null || echo ".")
+          fi
+          echo "PROJECT_ROOT=$PROJECT_ROOT"
+          echo "root=$PROJECT_ROOT" >> $GITHUB_OUTPUT
+          cd "$PROJECT_ROOT"
+          ls -la
+
+          # Install Gradle if needed
+          if [ ! -f "./gradlew" ]; then
+            echo "No gradlew found, installing Gradle and generating wrapper..."
+            curl -sL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/gradle.zip
+            unzip -q /tmp/gradle.zip -d /tmp
+            export PATH="/tmp/gradle-8.7/bin:$PATH"
+            gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x ./gradlew
+          echo "Gradle ready at $PROJECT_ROOT"
 
       - name: Build Release AAB
         run: |
-          # Find where gradlew is
-          GRADLEW=$(find . -name "gradlew" | head -1)
-          echo "Using gradlew at: $GRADLEW"
-          cd $(dirname $GRADLEW)
-          ./gradlew bundleRelease --no-daemon --stacktrace
+          cd "${{ steps.project.outputs.root }}"
+          ./gradlew bundleRelease --no-daemon --stacktrace || ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Find all AAB and APK files
+      - name: Find and show artifacts
         run: |
-          echo "===== Searching for AAB/APK ====="
-          find . -name "*.aab" -o -name "*.apk" | head -20
-          echo ""
-          echo "===== Full tree of build folders ====="
-          find . -type d -name "build" | head -10
-          find . -path "*/outputs/*" | head -30
+          echo "===== Searching for AAB / APK ====="
+          find . -name "*.aab" -o -name "*.apk" 2>/dev/null | tee /tmp/artifacts.txt
+          cat /tmp/artifacts.txt
 
-      - name: Upload any found artifacts
+      - name: Upload AAB/APK
         uses: actions/upload-artifact@v4
         with:
           name: ERMI-LINK-release
@@ -70,3 +83,4 @@ jobs:
             **/*.aab
             **/*.apk
           if-no-files-found: warn
+          retention-days: 30
