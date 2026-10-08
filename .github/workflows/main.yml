@@ -14,7 +14,7 @@ jobs:
       - name: Unzip project
         run: |
           unzip -q ERMI-LINK-PLAY-READY.zip
-          ls -la
+          ls -la ERMI-LINK-PLAY-READY
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -38,7 +38,7 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Show project build files
+      - name: Show build files
         run: |
           echo "===== settings.gradle ====="
           cat ERMI-LINK-PLAY-READY/settings.gradle || true
@@ -52,14 +52,28 @@ jobs:
           echo "===== gradle.properties ====="
           cat ERMI-LINK-PLAY-READY/gradle.properties || true
 
-      - name: Install Gradle 8.4 and generate wrapper
+      - name: Create Gradle Wrapper manually (no project config)
         run: |
           cd ERMI-LINK-PLAY-READY
-          curl -sL https://services.gradle.org/distributions/gradle-8.4-bin.zip -o /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /tmp
-          export PATH="/tmp/gradle-8.4/bin:$PATH"
-          gradle wrapper --gradle-version 8.4
-          chmod +x ./gradlew
+          mkdir -p gradle/wrapper
+          # Download official wrapper jar
+          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
+          # Create properties
+          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+          # Create gradlew script
+          curl -sL -o gradlew https://github.com/gradle/gradle/raw/v8.4.0/gradlew
+          chmod +x gradlew
+          ls -la gradle/wrapper/
+          ls -la gradlew
 
       - name: Build Release AAB
         run: |
@@ -68,8 +82,8 @@ jobs:
 
       - name: Find artifacts
         run: |
-          find . -name "*.aab" -o -name "*.apk" | tee /tmp/arts.txt
-          cat /tmp/arts.txt
+          echo "===== AAB / APK files ====="
+          find . -name "*.aab" -o -name "*.apk"
 
       - name: Upload AAB/APK
         uses: actions/upload-artifact@v4
@@ -79,4 +93,3 @@ jobs:
             **/*.aab
             **/*.apk
           if-no-files-found: warn
-          
