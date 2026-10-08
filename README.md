@@ -53,5 +53,4 @@ jobs:
         with:
           name: ERMI-LINK-release-AAB
           path: app/build/outputs/bundle/release/*.aab
-          if-no-files-found: error
-        
+          if-no-files-found: erro
