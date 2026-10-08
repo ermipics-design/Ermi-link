@@ -38,42 +38,23 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Show build files
-        run: |
-          echo "===== settings.gradle ====="
-          cat ERMI-LINK-PLAY-READY/settings.gradle || true
-          echo ""
-          echo "===== root build.gradle ====="
-          cat ERMI-LINK-PLAY-READY/build.gradle || true
-          echo ""
-          echo "===== app/build.gradle ====="
-          cat ERMI-LINK-PLAY-READY/app/build.gradle || true
-          echo ""
-          echo "===== gradle.properties ====="
-          cat ERMI-LINK-PLAY-READY/gradle.properties || true
-
-      - name: Create Gradle Wrapper manually (no project config)
+      - name: Create Gradle Wrapper (8.13)
         run: |
           cd ERMI-LINK-PLAY-READY
           mkdir -p gradle/wrapper
-          # Download official wrapper jar
           curl -sL -o gradle/wrapper/gradle-wrapper.jar \
-            https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar
-          # Create properties
+            https://github.com/gradle/gradle/raw/v8.13.0/gradle/wrapper/gradle-wrapper.jar
           cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
           networkTimeout=10000
           validateDistributionUrl=true
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
           EOF
-          # Create gradlew script
-          curl -sL -o gradlew https://github.com/gradle/gradle/raw/v8.4.0/gradlew
+          curl -sL -o gradlew https://github.com/gradle/gradle/raw/v8.13.0/gradlew
           chmod +x gradlew
-          ls -la gradle/wrapper/
-          ls -la gradlew
 
       - name: Build Release AAB
         run: |
